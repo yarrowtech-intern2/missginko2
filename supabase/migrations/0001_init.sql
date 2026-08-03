@@ -1,7 +1,7 @@
 -- Miss Ginko — initial schema
--- Enums, tables, RLS policies, triggers, and storage buckets for the
--- restaurant site: menu, bookings, private events, reviews (+ AI summary
--- cache), gallery, contact, newsletter, and a lightweight admin CRM layer.
+-- Enums, tables, RLS policies, and triggers for the restaurant site:
+-- menu, bookings, private events, reviews, gallery, contact, newsletter,
+-- and a lightweight admin CRM layer.
 
 -- ============================================================================
 -- Enums
@@ -286,7 +286,8 @@ create policy "Capacity settings are staff-writable"
   with check (public.is_staff_or_admin());
 
 create policy "Anyone can create a booking"
-  on public.bookings for insert with check (true);
+  on public.bookings for insert
+  with check (user_id is null or auth.uid() = user_id or public.is_staff_or_admin());
 
 create policy "Bookings are viewable by owner or staff"
   on public.bookings for select
@@ -329,7 +330,7 @@ as $$
 $$;
 
 -- ============================================================================
--- Reviews + AI-generated summary cache
+-- Reviews
 -- ============================================================================
 
 create table public.reviews (
@@ -344,19 +345,7 @@ create table public.reviews (
   created_at timestamptz not null default now()
 );
 
-create table public.review_summaries (
-  id uuid primary key default gen_random_uuid(),
-  generated_at timestamptz not null default now(),
-  overall_rating_avg numeric(3, 2) not null,
-  total_reviews integer not null,
-  atmosphere_summary text not null,
-  service_summary text not null,
-  food_summary text not null,
-  most_mentioned_dishes jsonb not null default '[]'
-);
-
 alter table public.reviews enable row level security;
-alter table public.review_summaries enable row level security;
 
 create policy "Approved reviews are public"
   on public.reviews for select
@@ -370,14 +359,6 @@ create policy "Reviews are moderated by staff"
   on public.reviews for update
   using (public.is_staff_or_admin())
   with check (public.is_staff_or_admin());
-
-create policy "Review summaries are public"
-  on public.review_summaries for select using (true);
-
-create policy "Review summaries are written by the service role only"
-  on public.review_summaries for all
-  using (public.is_admin())
-  with check (public.is_admin());
 
 -- ============================================================================
 -- Contact + newsletter
@@ -443,34 +424,3 @@ create policy "Customer notes are staff-only"
   on public.customer_notes for all
   using (public.is_staff_or_admin())
   with check (public.is_staff_or_admin());
-
--- ============================================================================
--- Storage buckets
--- ============================================================================
-
-insert into storage.buckets (id, name, public)
-values
-  ('menu-images', 'menu-images', true),
-  ('gallery-images', 'gallery-images', true),
-  ('event-photos', 'event-photos', true),
-  ('review-photos', 'review-photos', true),
-  ('avatars', 'avatars', true)
-on conflict (id) do nothing;
-
-create policy "Public read for public buckets"
-  on storage.objects for select
-  using (bucket_id in ('menu-images', 'gallery-images', 'event-photos', 'review-photos', 'avatars'));
-
-create policy "Staff can manage menu, gallery, and event images"
-  on storage.objects for all
-  using (bucket_id in ('menu-images', 'gallery-images', 'event-photos') and public.is_staff_or_admin())
-  with check (bucket_id in ('menu-images', 'gallery-images', 'event-photos') and public.is_staff_or_admin());
-
-create policy "Users can upload their own review photos"
-  on storage.objects for insert
-  with check (bucket_id = 'review-photos' and auth.uid() is not null);
-
-create policy "Users can manage their own avatar"
-  on storage.objects for all
-  using (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1])
-  with check (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);

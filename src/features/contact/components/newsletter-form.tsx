@@ -1,21 +1,53 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState } from "react"
 import { ArrowRight } from "lucide-react"
 
-import { subscribeNewsletterAction, type ActionResult } from "@/actions/newsletter.actions"
+import { newsletterSchema } from "@/schemas/newsletter.schema"
+import { subscribeToNewsletter } from "@/services/newsletter.service"
 import { cn } from "@/lib/utils"
 
-const initialState: ActionResult = { success: false }
+interface NewsletterState {
+  success: boolean
+  error?: string
+}
 
 export function NewsletterForm({ className }: { className?: string }) {
-  const [state, formAction, pending] = useActionState(
-    subscribeNewsletterAction,
-    initialState
-  )
+  const [state, setState] = useState<NewsletterState>({ success: false })
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    const parsed = newsletterSchema.safeParse({ email: formData.get("email") })
+
+    if (!parsed.success) {
+      setState({
+        success: false,
+        error: parsed.error.issues[0]?.message ?? "Invalid email.",
+      })
+      return
+    }
+
+    setPending(true)
+    setState({ success: false })
+
+    try {
+      await subscribeToNewsletter(parsed.data)
+      form.reset()
+      setState({ success: true })
+    } catch (error) {
+      console.error("Failed to subscribe to newsletter:", error)
+      setState({ success: false, error: "Something went wrong. Please try again." })
+    } finally {
+      setPending(false)
+    }
+  }
 
   return (
-    <form action={formAction} className={cn("w-full", className)}>
+    <form onSubmit={handleSubmit} className={cn("w-full", className)}>
       <div className="flex items-end gap-4 border-b border-current/30 pb-3">
         <input
           type="email"

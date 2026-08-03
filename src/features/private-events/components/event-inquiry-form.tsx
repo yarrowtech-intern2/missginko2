@@ -1,14 +1,20 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState } from "react"
 
-import { submitEventInquiryAction, type EventInquiryResult } from "@/actions/events.actions"
 import { MagneticButton } from "@/components/common/magnetic-button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { eventTypes } from "@/schemas/event-inquiry.schema"
+import { eventInquirySchema, eventTypes } from "@/schemas/event-inquiry.schema"
+import { createEventInquiry } from "@/services/events.service"
+import type { FieldErrors } from "@/lib/form-errors"
+import { getFieldErrors } from "@/lib/form-errors"
 
-const initialState: EventInquiryResult = { success: false }
+interface EventInquiryState {
+  success: boolean
+  error?: string
+  fieldErrors?: FieldErrors
+}
 
 const eventTypeLabels: Record<(typeof eventTypes)[number], string> = {
   wedding: "Wedding",
@@ -19,7 +25,47 @@ const eventTypeLabels: Record<(typeof eventTypes)[number], string> = {
 }
 
 export function EventInquiryForm() {
-  const [state, formAction, pending] = useActionState(submitEventInquiryAction, initialState)
+  const [state, setState] = useState<EventInquiryState>({ success: false })
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    const parsed = eventInquirySchema.safeParse({
+      eventType: formData.get("eventType"),
+      fullName: formData.get("fullName"),
+      email: formData.get("email"),
+      phone: formData.get("phone"),
+      eventDate: formData.get("eventDate"),
+      guestCount: formData.get("guestCount"),
+      message: formData.get("message") || undefined,
+    })
+
+    if (!parsed.success) {
+      setState({
+        success: false,
+        error: "Please check the highlighted fields.",
+        fieldErrors: getFieldErrors(parsed.error),
+      })
+      return
+    }
+
+    setPending(true)
+    setState({ success: false })
+
+    try {
+      await createEventInquiry(parsed.data)
+      form.reset()
+      setState({ success: true })
+    } catch (error) {
+      console.error("Failed to submit event inquiry:", error)
+      setState({ success: false, error: "Something went wrong. Please try again." })
+    } finally {
+      setPending(false)
+    }
+  }
 
   if (state.success) {
     return (
@@ -34,7 +80,7 @@ export function EventInquiryForm() {
   }
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="eventType">Event type</Label>
@@ -136,7 +182,7 @@ export function EventInquiryForm() {
           id="message"
           name="message"
           rows={4}
-          placeholder="Vision, budget range, must-haves — anything that helps us plan."
+          placeholder="Vision, budget range, must-haves - anything that helps us plan."
           className="rounded-none border-0 border-b border-border px-1"
         />
       </div>
@@ -147,8 +193,8 @@ export function EventInquiryForm() {
         </p>
       )}
 
-      <MagneticButton type="submit" className="w-full sm:w-auto">
-        {pending ? "Sending…" : "Submit Inquiry"}
+      <MagneticButton type="submit" className="w-full sm:w-auto" disabled={pending}>
+        {pending ? "Sending..." : "Submit Inquiry"}
       </MagneticButton>
     </form>
   )

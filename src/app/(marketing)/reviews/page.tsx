@@ -2,10 +2,8 @@ import type { Metadata } from "next"
 
 import { ReviewForm } from "@/features/reviews/components/review-form"
 import { ReviewList } from "@/features/reviews/components/review-list"
-import { ReviewSummaryPanel } from "@/features/reviews/components/review-summary-panel"
 import { buildMetadata } from "@/seo/metadata"
-import { getApprovedReviews, getLatestReviewSummary } from "@/services/reviews.service"
-import { createClient } from "@/supabase/server"
+import { getApprovedReviews } from "@/services/reviews.service"
 
 export const metadata: Metadata = buildMetadata({
   title: "Reviews",
@@ -15,18 +13,12 @@ export const metadata: Metadata = buildMetadata({
 
 export default async function ReviewsPage() {
   let reviews: Awaited<ReturnType<typeof getApprovedReviews>> = []
-  let summary: Awaited<ReturnType<typeof getLatestReviewSummary>> = null
 
   try {
-    ;[reviews, summary] = await Promise.all([getApprovedReviews(), getLatestReviewSummary()])
+    reviews = await getApprovedReviews()
   } catch (error) {
     console.warn("Failed to load reviews from Supabase:", error)
   }
-
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
 
   return (
     <div className="bg-background pt-32 pb-28 md:pt-40">
@@ -37,12 +29,6 @@ export default async function ReviewsPage() {
         <h1 className="mt-4 font-display text-[clamp(2.5rem,2rem+3vw,5rem)] leading-[0.95] font-light">
           What Guests Love
         </h1>
-
-        {summary && (
-          <div className="mt-14 border-t border-border pt-10">
-            <ReviewSummaryPanel summary={summary} />
-          </div>
-        )}
 
         <div className="mt-20 grid gap-16 lg:grid-cols-[1fr,22rem]">
           <div>
@@ -55,7 +41,7 @@ export default async function ReviewsPage() {
           <div className="lg:sticky lg:top-28 lg:self-start">
             <h2 className="font-display text-2xl font-light">Leave a Review</h2>
             <div className="mt-6">
-              <ReviewForm isSignedIn={Boolean(user)} />
+              <ReviewForm />
             </div>
           </div>
         </div>

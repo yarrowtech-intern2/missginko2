@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-import { checkAvailabilityAction } from "@/actions/booking.actions"
+import { getAvailableCovers } from "@/services/booking.service"
 import type { BookingArea } from "@/types/database"
 import { cn } from "@/lib/utils"
 
@@ -30,9 +30,15 @@ export function AvailabilityBadge({ date, time, area, partySize }: AvailabilityB
     setLoading(true)
 
     const timeout = setTimeout(async () => {
-      const result = await checkAvailabilityAction(date, time, area)
+      let nextCovers: number | null = null
+      try {
+        nextCovers = await getAvailableCovers(date, time, area)
+      } catch (error) {
+        console.error("Failed to check booking availability:", error)
+      }
+
       if (!cancelled) {
-        setCovers(result.covers)
+        setCovers(nextCovers)
         setLoading(false)
       }
     }, 350)

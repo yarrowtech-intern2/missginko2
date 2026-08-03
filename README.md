@@ -1,15 +1,16 @@
-# Miss Ginko — Restaurant Website
+# Miss Ginko Restaurant Website
 
-Modern Asian fine dining site: Next.js App Router, Tailwind v4, GSAP + Lenis
-motion system, Supabase (Postgres/Auth/Storage), Claude for AI review
-summarization. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full system
-design — this file only covers getting it running.
+Static-export Next.js site for a restaurant experience: App Router, Tailwind v4,
+GSAP + Lenis motion, and Supabase for Auth/Postgres.
+
+The deployed site is intended to run as a static site. There is no separate
+Node.js backend and no service-role key in the frontend. Supabase RLS policies
+are the security boundary for admin reads and writes.
 
 ## Prerequisites
 
 - Node.js 20+
-- A [Supabase](https://supabase.com) project (or the Supabase CLI + Docker for local dev)
-- An [Anthropic API key](https://console.anthropic.com) (only needed for the admin "Regenerate AI Summary" feature)
+- A Supabase project
 
 ## Setup
 
@@ -22,51 +23,47 @@ Fill in `.env.local`:
 
 | Variable | Where to find it |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project → Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase project → Settings → API (keep server-only, never expose) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project > Settings > API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project > Settings > API |
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` for local dev |
-| `ANTHROPIC_API_KEY` | console.anthropic.com — optional until you use AI review summaries |
 
-### Database
+Do not add `SUPABASE_SERVICE_ROLE_KEY` to a static host. The browser app uses
+only the anon key and RLS.
 
-Apply the schema to your Supabase project. Either:
+## Database
 
-```bash
-npx supabase link --project-ref <your-project-ref>
-npx supabase db push
-```
+For a new Supabase project, apply `supabase/migrations/0001_init.sql`, then
+optionally seed sample data with `supabase/seed.sql`.
 
-or paste the contents of `supabase/migrations/0001_init.sql` into the
-Supabase SQL editor directly. Then optionally seed sample data with
-`supabase/seed.sql` (also picked up automatically by `supabase db reset` in
-local dev).
+If you already applied the first migration before the static-only refactor, also
+run `supabase/migrations/0002_static_export_cleanup.sql`. It tightens booking
+inserts, removes the unused review-summary table, and removes empty storage
+buckets created by the older schema.
 
-### Run
+## Run Locally
 
 ```bash
 npm run dev
 ```
 
-Without a real Supabase project configured, the app still builds and runs —
-pages that read live data (menu, gallery, private events, reviews) render a
-graceful "coming soon" empty state instead of erroring, so you can preview
-the design immediately and wire up data later.
+## Static Build
 
-## Scripts
+```bash
+npm run build
+```
 
-| Command | What it does |
+The build writes static output to `out/`.
+
+## Render Static Site
+
+Use Render's **Static Site** product:
+
+| Setting | Value |
 |---|---|
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm run start` | Serve the production build |
-| `npm run lint` | ESLint |
+| Root Directory | leave blank unless the repo is inside a subfolder |
+| Build Command | `npm ci && npm run build` |
+| Publish Directory | `out` |
+| Environment | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` |
 
-## Adding real assets
-
-Every photo/video on the site is currently a labeled placeholder
-(`components/common/placeholder-media.tsx`) so the layout and motion are
-correct without real media. Drop files into `public/` and pass a `src` prop
-where each placeholder is used (or set `HERO_VIDEO_SRC` in
-`features/home/components/hero.tsx` for the homepage video) — no other code
-changes needed.
+Images are external URLs or files in `public/`; the app does not upload heavy
+files to Supabase Storage.

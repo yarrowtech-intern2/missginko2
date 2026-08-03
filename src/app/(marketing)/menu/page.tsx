@@ -13,8 +13,6 @@ export const metadata: Metadata = buildMetadata({
   path: "/menu",
 })
 
-export const revalidate = 3600
-
 export default async function MenuPage() {
   let categories: Awaited<ReturnType<typeof getMenu>> = []
   try {

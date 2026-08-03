@@ -13,6 +13,7 @@ interface MagneticButtonProps {
   variant?: "solid" | "outline" | "ghost"
   onClick?: ComponentProps<"button">["onClick"]
   type?: ComponentProps<"button">["type"]
+  disabled?: boolean
   /** Render only the magnetic visual, no own <a>/<button> — use when an
    * ancestor (e.g. a Base UI SheetClose `render` prop) already supplies the
    * interactive element, to avoid nesting a button inside an anchor. */
@@ -38,6 +39,7 @@ export function MagneticButton({
   variant = "solid",
   onClick,
   type = "button",
+  disabled = false,
   static: isStatic = false,
 }: MagneticButtonProps) {
   const ref = useMagnetic<HTMLDivElement>(0.35)
@@ -48,6 +50,7 @@ export function MagneticButton({
       className={cn(
         "group inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-xs font-medium tracking-[0.14em] uppercase transition-colors duration-300",
         variants[variant],
+        disabled && "pointer-events-none opacity-60",
         className
       )}
     >
@@ -78,7 +81,7 @@ export function MagneticButton({
   }
 
   return (
-    <button type={type} onClick={onClick} className="inline-block">
+    <button type={type} onClick={onClick} disabled={disabled} className="inline-block">
       {content}
     </button>
   )

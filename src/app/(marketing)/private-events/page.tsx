@@ -13,8 +13,6 @@ export const metadata: Metadata = buildMetadata({
   path: "/private-events",
 })
 
-export const revalidate = 3600
-
 export default async function PrivateEventsPage() {
   let packages: Awaited<ReturnType<typeof getEventPackages>> = []
   try {

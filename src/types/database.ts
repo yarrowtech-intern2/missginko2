@@ -138,17 +138,6 @@ type ReviewsRow = {
   created_at: string
 }
 
-type ReviewSummariesRow = {
-  id: string
-  generated_at: string
-  overall_rating_avg: number
-  total_reviews: number
-  atmosphere_summary: string
-  service_summary: string
-  food_summary: string
-  most_mentioned_dishes: { name: string; mentions: number }[]
-}
-
 type ContactSubmissionsRow = {
   id: string
   name: string
@@ -205,7 +194,6 @@ export interface Database {
       >
       restaurant_capacity: Table<RestaurantCapacityRow, "area" | "time_slot" | "max_covers">
       reviews: Table<ReviewsRow, "author_name" | "rating" | "comment">
-      review_summaries: Table<ReviewSummariesRow, never>
       contact_submissions: Table<
         ContactSubmissionsRow,
         "name" | "email" | "subject" | "message"

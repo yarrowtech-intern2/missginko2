@@ -1,8 +1,8 @@
-import { createClient } from "@/supabase/server"
+import { createClient } from "@/supabase/client"
 import type { NewsletterInput } from "@/schemas/newsletter.schema"
 
 export async function subscribeToNewsletter({ email }: NewsletterInput) {
-  const supabase = await createClient()
+  const supabase = createClient()
 
   const { error } = await supabase
     .from("newsletter_subscribers")

@@ -1,5 +1,5 @@
-import { createClient, createServiceClient } from "@/supabase/server"
 import { createPublicClient } from "@/supabase/public"
+import { createClient } from "@/supabase/client"
 import type { BookingArea } from "@/types/database"
 import type { BookingInput } from "@/schemas/booking.schema"
 
@@ -24,18 +24,15 @@ export async function getAvailableCovers(date: string, time: string, area: Booki
 }
 
 export async function createBooking(input: BookingInput) {
-  const supabase = await createClient()
-
+  const supabase = createClient()
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
 
-  const serviceSupabase = await createServiceClient()
-
-  const { data, error } = await serviceSupabase
+  const { data, error } = await supabase
     .from("bookings")
     .insert({
-      user_id: user?.id ?? null,
+      user_id: session?.user.id ?? null,
       full_name: input.fullName,
       email: input.email,
       phone: input.phone,

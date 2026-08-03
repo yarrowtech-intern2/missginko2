@@ -1,9 +1,12 @@
+"use client"
+
+import { useState } from "react"
 import { PhoneCall } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { StatusActions } from "@/features/admin/components/status-actions"
-import { updateBookingStatusAction } from "@/actions/admin.actions"
+import { updateBookingStatus } from "@/services/admin.service"
 import { cn } from "@/lib/utils"
 import type { BookingStatus, Database } from "@/types/database"
 
@@ -32,6 +35,7 @@ export function BookingDetailCard({
   booking: Booking
   compact?: boolean
 }) {
+  const [status, setStatus] = useState(booking.status)
   const reference = booking.id.slice(0, 8)
   const telHref = `tel:${booking.phone.replace(/[^\d+]/g, "")}`
 
@@ -41,7 +45,7 @@ export function BookingDetailCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-display text-xl font-light">{booking.full_name}</h2>
-            <Badge variant={statusTone[booking.status]}>{booking.status.replace("_", " ")}</Badge>
+            <Badge variant={statusTone[status]}>{status.replace("_", " ")}</Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             Reference #{reference}
@@ -87,9 +91,10 @@ export function BookingDetailCard({
         </p>
         <StatusActions
           id={booking.id}
-          current={booking.status}
+          current={status}
           options={[...statusOptions]}
-          action={updateBookingStatusAction}
+          onUpdate={updateBookingStatus}
+          onUpdated={setStatus}
         />
       </div>
     </article>

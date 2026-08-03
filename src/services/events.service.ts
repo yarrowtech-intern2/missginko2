@@ -1,5 +1,5 @@
-import { createClient } from "@/supabase/server"
 import { createPublicClient } from "@/supabase/public"
+import { createClient } from "@/supabase/client"
 import type { Database } from "@/types/database"
 import type { EventInquiryInput } from "@/schemas/event-inquiry.schema"
 
@@ -18,7 +18,7 @@ export async function getEventPackages(): Promise<EventPackage[]> {
 }
 
 export async function createEventInquiry(input: EventInquiryInput) {
-  const supabase = await createClient()
+  const supabase = createClient()
 
   const { error } = await supabase.from("private_events").insert({
     event_type: input.eventType,

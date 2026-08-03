@@ -1,6 +1,7 @@
 "use client"
 
-import { useTransition } from "react"
+import { useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -9,16 +10,36 @@ interface StatusActionsProps<S extends string> {
   id: string
   current: S
   options: { value: S; label: string }[]
-  action: (id: string, status: S) => Promise<void>
+  onUpdate: (id: string, status: S) => Promise<void>
+  onUpdated?: (status: S) => void
 }
 
 export function StatusActions<S extends string>({
   id,
   current,
   options,
-  action,
+  onUpdate,
+  onUpdated,
 }: StatusActionsProps<S>) {
-  const [pending, startTransition] = useTransition()
+  const [selectedById, setSelectedById] = useState<Partial<Record<string, S>>>({})
+  const [pending, setPending] = useState<S | null>(null)
+  const selected = selectedById[id] ?? current
+
+  async function handleUpdate(status: S) {
+    setPending(status)
+
+    try {
+      await onUpdate(id, status)
+      setSelectedById((statuses) => ({ ...statuses, [id]: status }))
+      onUpdated?.(status)
+      toast.success("Status updated.")
+    } catch (error) {
+      console.error("Failed to update status:", error)
+      toast.error("Could not update status.")
+    } finally {
+      setPending(null)
+    }
+  }
 
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -26,12 +47,12 @@ export function StatusActions<S extends string>({
         <Button
           key={option.value}
           size="xs"
-          variant={option.value === current ? "default" : "outline"}
-          disabled={pending || option.value === current}
-          onClick={() => startTransition(() => action(id, option.value))}
-          className={cn(option.value === current && "pointer-events-none")}
+          variant={option.value === selected ? "default" : "outline"}
+          disabled={pending !== null || option.value === selected}
+          onClick={() => handleUpdate(option.value)}
+          className={cn(option.value === selected && "pointer-events-none")}
         >
-          {option.label}
+          {pending === option.value ? "Saving..." : option.label}
         </Button>
       ))}
     </div>

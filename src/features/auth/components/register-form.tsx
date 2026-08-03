@@ -1,18 +1,63 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
-import { signUpAction, type AuthActionResult } from "@/actions/auth.actions"
 import { MagneticButton } from "@/components/common/magnetic-button"
 import { Label } from "@/components/ui/label"
+import { registerSchema } from "@/schemas/auth.schema"
+import { createClient } from "@/supabase/client"
 
-const initialState: AuthActionResult = { success: false }
+interface AuthFormState {
+  success: boolean
+  error?: string
+}
 
 export function RegisterForm() {
-  const [state, formAction, pending] = useActionState(signUpAction, initialState)
+  const router = useRouter()
+  const [state, setState] = useState<AuthFormState>({ success: false })
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+    const parsed = registerSchema.safeParse({
+      fullName: formData.get("fullName"),
+      email: formData.get("email"),
+      password: formData.get("password"),
+    })
+
+    if (!parsed.success) {
+      setState({
+        success: false,
+        error: parsed.error.issues[0]?.message ?? "Invalid input.",
+      })
+      return
+    }
+
+    setPending(true)
+    setState({ success: false })
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.signUp({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      options: { data: { full_name: parsed.data.fullName } },
+    })
+
+    setPending(false)
+
+    if (error) {
+      setState({ success: false, error: error.message })
+      return
+    }
+
+    router.push("/")
+  }
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="fullName">Full name</Label>
         <input
@@ -48,8 +93,8 @@ export function RegisterForm() {
           {state.error}
         </p>
       )}
-      <MagneticButton type="submit" className="w-full">
-        {pending ? "Creating account…" : "Create Account"}
+      <MagneticButton type="submit" className="w-full" disabled={pending}>
+        {pending ? "Creating account..." : "Create Account"}
       </MagneticButton>
     </form>
   )

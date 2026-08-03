@@ -1,16 +1,61 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState } from "react"
 
-import { submitContactAction, type ContactActionResult } from "@/actions/contact.actions"
 import { MagneticButton } from "@/components/common/magnetic-button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { contactSchema } from "@/schemas/contact.schema"
+import { createContactSubmission } from "@/services/contact.service"
+import type { FieldErrors } from "@/lib/form-errors"
+import { getFieldErrors } from "@/lib/form-errors"
 
-const initialState: ContactActionResult = { success: false }
+interface ContactFormState {
+  success: boolean
+  error?: string
+  fieldErrors?: FieldErrors
+}
 
 export function ContactForm() {
-  const [state, formAction, pending] = useActionState(submitContactAction, initialState)
+  const [state, setState] = useState<ContactFormState>({ success: false })
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    const parsed = contactSchema.safeParse({
+      name: formData.get("name"),
+      email: formData.get("email"),
+      phone: formData.get("phone") || undefined,
+      subject: formData.get("subject"),
+      message: formData.get("message"),
+    })
+
+    if (!parsed.success) {
+      setState({
+        success: false,
+        error: "Please check the highlighted fields.",
+        fieldErrors: getFieldErrors(parsed.error),
+      })
+      return
+    }
+
+    setPending(true)
+    setState({ success: false })
+
+    try {
+      await createContactSubmission(parsed.data)
+      form.reset()
+      setState({ success: true })
+    } catch (error) {
+      console.error("Failed to submit contact message:", error)
+      setState({ success: false, error: "Something went wrong. Please try again." })
+    } finally {
+      setPending(false)
+    }
+  }
 
   if (state.success) {
     return (
@@ -24,7 +69,7 @@ export function ContactForm() {
   }
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
@@ -94,7 +139,9 @@ export function ContactForm() {
         </p>
       )}
 
-      <MagneticButton type="submit">{pending ? "Sending…" : "Send Message"}</MagneticButton>
+      <MagneticButton type="submit" disabled={pending}>
+        {pending ? "Sending..." : "Send Message"}
+      </MagneticButton>
     </form>
   )
 }

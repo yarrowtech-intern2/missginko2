@@ -1,10 +1,11 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useState } from "react"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
 
-import { createBookingAction, type BookingActionResult } from "@/actions/booking.actions"
+import { createBooking, getAvailableCovers } from "@/services/booking.service"
 import { AvailabilityBadge } from "@/features/booking/components/availability-badge"
 import { MagneticButton } from "@/components/common/magnetic-button"
 import { Calendar } from "@/components/ui/calendar"
@@ -18,11 +19,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { bookingAreas, occasions, timeSlots } from "@/schemas/booking.schema"
+import { bookingAreas, bookingSchema, occasions, timeSlots } from "@/schemas/booking.schema"
 import type { BookingArea } from "@/types/database"
+import type { FieldErrors } from "@/lib/form-errors"
+import { getFieldErrors } from "@/lib/form-errors"
 import { cn } from "@/lib/utils"
 
-const initialState: BookingActionResult = { success: false }
+interface BookingFormState {
+  error?: string
+  fieldErrors?: FieldErrors
+}
 
 const areaLabels: Record<BookingArea, string> = {
   indoor: "Indoor",
@@ -31,7 +37,9 @@ const areaLabels: Record<BookingArea, string> = {
 }
 
 export function BookingForm() {
-  const [state, formAction, pending] = useActionState(createBookingAction, initialState)
+  const router = useRouter()
+  const [state, setState] = useState<BookingFormState>({})
+  const [pending, setPending] = useState(false)
 
   const [date, setDate] = useState<Date>()
   const [time, setTime] = useState("")
@@ -41,8 +49,59 @@ export function BookingForm() {
 
   const dateValue = date ? format(date, "yyyy-MM-dd") : ""
 
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+    const parsed = bookingSchema.safeParse({
+      fullName: formData.get("fullName"),
+      email: formData.get("email"),
+      phone: formData.get("phone"),
+      partySize: formData.get("partySize"),
+      date: formData.get("date"),
+      time: formData.get("time"),
+      area: formData.get("area"),
+      occasion: formData.get("occasion") || undefined,
+      specialRequests: formData.get("specialRequests") || undefined,
+    })
+
+    if (!parsed.success) {
+      setState({
+        error: "Please check the highlighted fields.",
+        fieldErrors: getFieldErrors(parsed.error),
+      })
+      return
+    }
+
+    setPending(true)
+    setState({})
+
+    try {
+      const covers = await getAvailableCovers(
+        parsed.data.date,
+        parsed.data.time,
+        parsed.data.area
+      )
+
+      if (covers < parsed.data.partySize) {
+        setState({
+          error: `Only ${covers} seats remain for that time. Try another slot.`,
+        })
+        return
+      }
+
+      const booking = await createBooking(parsed.data)
+      router.push(`/booking/success?ref=${booking.id.slice(0, 8)}`)
+    } catch (error) {
+      console.error("Failed to create booking:", error)
+      setState({ error: "Something went wrong. Please try again." })
+    } finally {
+      setPending(false)
+    }
+  }
+
   return (
-    <form action={formAction} className="space-y-10">
+    <form onSubmit={handleSubmit} className="space-y-10">
       <input type="hidden" name="date" value={dateValue} />
       <input type="hidden" name="time" value={time} />
       <input type="hidden" name="area" value={area} />
@@ -227,8 +286,8 @@ export function BookingForm() {
         </p>
       )}
 
-      <MagneticButton type="submit" className="w-full sm:w-auto">
-        {pending ? "Reserving…" : "Confirm Reservation"}
+      <MagneticButton type="submit" className="w-full sm:w-auto" disabled={pending}>
+        {pending ? "Reserving..." : "Confirm Reservation"}
       </MagneticButton>
     </form>
   )

@@ -10,13 +10,7 @@ export const metadata: Metadata = buildMetadata({
   noIndex: true,
 })
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ redirectTo?: string }>
-}) {
-  const { redirectTo } = await searchParams
-
+export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 pt-24">
       <div className="w-full max-w-sm">
@@ -25,7 +19,7 @@ export default async function LoginPage({
           Leave a review, track reservations, and save your preferences.
         </p>
         <div className="mt-8">
-          <LoginForm redirectTo={redirectTo} />
+          <LoginForm />
         </div>
         <p className="mt-6 text-sm text-muted-foreground">
           No account?{" "}

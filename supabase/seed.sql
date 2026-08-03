@@ -36,6 +36,3 @@ insert into public.restaurant_capacity (area, time_slot, max_covers)
 select area, time_slot, 24
 from unnest(enum_range(null::booking_area)) as area,
      unnest(array['17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00']::time[]) as time_slot;
-
-insert into public.review_summaries (overall_rating_avg, total_reviews, atmosphere_summary, service_summary, food_summary, most_mentioned_dishes) values
-  (4.8, 214, 'Guests consistently describe the room as intimate and quiet, praising the lighting and low noise level for conversation.', 'Service is frequently called attentive without being intrusive, with several mentions of staff remembering returning guests.', 'The wagyu and black cod are the most praised dishes; several reviews highlight the tasting menu as the best way to experience the kitchen.', '[{"name":"Charcoal Grilled Wagyu","mentions":58},{"name":"Yuzu Kosho Black Cod","mentions":41},{"name":"Hokkaido Uni Toast","mentions":33}]'::jsonb);

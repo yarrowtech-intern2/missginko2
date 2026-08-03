@@ -1,8 +1,8 @@
-import { createClient } from "@/supabase/server"
+import { createClient } from "@/supabase/client"
 import type { ContactInput } from "@/schemas/contact.schema"
 
 export async function createContactSubmission(input: ContactInput) {
-  const supabase = await createClient()
+  const supabase = createClient()
 
   const { error } = await supabase.from("contact_submissions").insert({
     name: input.name,
