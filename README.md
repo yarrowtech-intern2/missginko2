@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Miss Ginko — Restaurant Website
 
-## Getting Started
+Modern Asian fine dining site: Next.js App Router, Tailwind v4, GSAP + Lenis
+motion system, Supabase (Postgres/Auth/Storage), Claude for AI review
+summarization. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full system
+design — this file only covers getting it running.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 20+
+- A [Supabase](https://supabase.com) project (or the Supabase CLI + Docker for local dev)
+- An [Anthropic API key](https://console.anthropic.com) (only needed for the admin "Regenerate AI Summary" feature)
+
+## Setup
+
+```bash
+npm install
+cp .env.local.example .env.local
+```
+
+Fill in `.env.local`:
+
+| Variable | Where to find it |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project → Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase project → Settings → API (keep server-only, never expose) |
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` for local dev |
+| `ANTHROPIC_API_KEY` | console.anthropic.com — optional until you use AI review summaries |
+
+### Database
+
+Apply the schema to your Supabase project. Either:
+
+```bash
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push
+```
+
+or paste the contents of `supabase/migrations/0001_init.sql` into the
+Supabase SQL editor directly. Then optionally seed sample data with
+`supabase/seed.sql` (also picked up automatically by `supabase db reset` in
+local dev).
+
+### Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Without a real Supabase project configured, the app still builds and runs —
+pages that read live data (menu, gallery, private events, reviews) render a
+graceful "coming soon" empty state instead of erroring, so you can preview
+the design immediately and wire up data later.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | ESLint |
 
-## Learn More
+## Adding real assets
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Every photo/video on the site is currently a labeled placeholder
+(`components/common/placeholder-media.tsx`) so the layout and motion are
+correct without real media. Drop files into `public/` and pass a `src` prop
+where each placeholder is used (or set `HERO_VIDEO_SRC` in
+`features/home/components/hero.tsx` for the homepage video) — no other code
+changes needed.
