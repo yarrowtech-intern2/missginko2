@@ -237,6 +237,10 @@
     text-wrap: balance;
   }
 
+  .loader-failsafe {
+    animation: loader-failsafe 4.4s ease forwards;
+  }
+
   .call-ripple::before,
   .call-ripple::after {
     content: "";
@@ -274,6 +278,20 @@
   100% {
     opacity: 0;
     transform: scale(1.18);
+  }
+}
+
+@keyframes loader-failsafe {
+  0%,
+  82% {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 }
 

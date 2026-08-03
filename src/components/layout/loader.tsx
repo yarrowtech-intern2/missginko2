@@ -25,106 +25,136 @@ export function Loader() {
   const [hidden, setHidden] = useState(false)
 
   useIsomorphicLayoutEffect(() => {
+    let completed = false
+
+    const complete = () => {
+      if (completed) return
+      completed = true
+      document.documentElement.style.overflow = ""
+      setHidden(true)
+      window.dispatchEvent(new CustomEvent(LOADER_COMPLETE_EVENT))
+    }
+
+    const forceHide = window.setTimeout(complete, 4200)
+
     if (window.matchMedia(REDUCED_MOTION_QUERY).matches) {
       // Reduced-motion preference is unreadable during SSR; skip the loader
       // entirely post-mount instead of ever rendering its animation.
-      setHidden(true)
-      window.dispatchEvent(new CustomEvent(LOADER_COMPLETE_EVENT))
-      return
+      complete()
+      return () => window.clearTimeout(forceHide)
     }
 
     document.documentElement.style.overflow = "hidden"
-    registerGsap()
 
     const root = rootRef.current
     const counter = counterRef.current
     const wordmark = wordmarkRef.current
-    if (!root || !counter || !wordmark) return
+    if (!root || !counter || !wordmark) {
+      complete()
+      return () => window.clearTimeout(forceHide)
+    }
 
     const progress = { value: 0 }
     let pageLoaded = false
     let splitReverted = false
     let finishCall: gsap.core.Tween | undefined
+    let tl: gsap.core.Timeline | undefined
 
-    const split = SplitText.create(wordmark, { type: "chars", mask: "chars" })
-    gsap.set(split.chars, { yPercent: 110 })
+    try {
+      registerGsap()
 
-    const revertSplit = () => {
-      if (splitReverted) return
-      split.revert()
-      splitReverted = true
-    }
+      const split = SplitText.create(wordmark, { type: "chars", mask: "chars" })
+      gsap.set(split.chars, { yPercent: 110 })
 
-    const tl = gsap.timeline()
+      const revertSplit = () => {
+        if (splitReverted) return
+        split.revert()
+        splitReverted = true
+      }
 
-    tl.to(split.chars, {
-      yPercent: 0,
-      duration: 1,
-      ease: "premium",
-      stagger: 0.03,
-    }).to(
-      progress,
-      {
-        value: 92,
-        duration: 2.2,
-        ease: "soft",
-        onUpdate: () => {
-          counter.textContent = String(Math.floor(progress.value)).padStart(2, "0")
-        },
-      },
-      "-=0.4"
-    )
+      tl = gsap.timeline()
 
-    const finish = () => {
-      if (pageLoaded) return
-      pageLoaded = true
-
-      gsap
-        .timeline({
-          onComplete: () => {
-            document.documentElement.style.overflow = ""
-            revertSplit()
-            setHidden(true)
-            window.dispatchEvent(new CustomEvent(LOADER_COMPLETE_EVENT))
-          },
-        })
-        .to(progress, {
-          value: 100,
-          duration: 0.5,
+      tl.to(split.chars, {
+        yPercent: 0,
+        duration: 1,
+        ease: "premium",
+        stagger: 0.03,
+      }).to(
+        progress,
+        {
+          value: 92,
+          duration: 2.2,
           ease: "soft",
           onUpdate: () => {
             counter.textContent = String(Math.floor(progress.value)).padStart(2, "0")
           },
-        })
-        .to([wordmark, counter], {
-          opacity: 0,
-          duration: 0.4,
-          ease: "soft",
-        })
-        .to(root, {
-          clipPath: "inset(0% 0% 100% 0%)",
-          duration: 0.9,
-          ease: "premium",
-        })
-    }
+        },
+        "-=0.4"
+      )
 
-    const handleLoad = () => {
-      finishCall?.kill()
-      finishCall = gsap.delayedCall(0.6, finish)
-    }
+      const finish = () => {
+        if (pageLoaded || completed) return
+        pageLoaded = true
 
-    if (document.readyState === "complete") {
-      finishCall = gsap.delayedCall(1.4, finish)
-    } else {
-      window.addEventListener("load", handleLoad)
-      finishCall = gsap.delayedCall(3.2, finish)
-    }
+        gsap
+          .timeline({
+            onComplete: () => {
+              window.clearTimeout(forceHide)
+              complete()
+            },
+          })
+          .to(progress, {
+            value: 100,
+            duration: 0.5,
+            ease: "soft",
+            onUpdate: () => {
+              counter.textContent = String(Math.floor(progress.value)).padStart(2, "0")
+            },
+          })
+          .to([wordmark, counter], {
+            opacity: 0,
+            duration: 0.4,
+            ease: "soft",
+          })
+          .to(root, {
+            clipPath: "inset(0% 0% 100% 0%)",
+            duration: 0.9,
+            ease: "premium",
+            onComplete: () => {
+              root.style.pointerEvents = "none"
+            },
+          })
+          .eventCallback("onComplete", () => {
+            revertSplit()
+            window.clearTimeout(forceHide)
+            complete()
+          })
+      }
 
-    return () => {
-      window.removeEventListener("load", handleLoad)
-      finishCall?.kill()
-      tl.kill()
-      revertSplit()
+      const handleLoad = () => {
+        finishCall?.kill()
+        finishCall = gsap.delayedCall(0.6, finish)
+      }
+
+      if (document.readyState === "complete") {
+        finishCall = gsap.delayedCall(1.4, finish)
+      } else {
+        window.addEventListener("load", handleLoad)
+        finishCall = gsap.delayedCall(3.2, finish)
+      }
+
+      return () => {
+        window.clearTimeout(forceHide)
+        window.removeEventListener("load", handleLoad)
+        finishCall?.kill()
+        tl?.kill()
+        revertSplit()
+        document.documentElement.style.overflow = ""
+      }
+    } catch (error) {
+      console.error("Loader animation failed:", error)
+      complete()
+      return () => window.clearTimeout(forceHide)
     }
   }, [])
 
@@ -133,7 +163,7 @@ export function Loader() {
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-8 bg-background text-foreground"
+      className="loader-failsafe fixed inset-0 z-[200] flex flex-col items-center justify-center gap-8 bg-background text-foreground"
       style={{ clipPath: "inset(0% 0% 0% 0%)" }}
       role="status"
       aria-live="polite"
