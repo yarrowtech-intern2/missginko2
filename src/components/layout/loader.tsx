@@ -171,7 +171,7 @@ export function Loader() {
     >
       <h1
         ref={wordmarkRef}
-        className="font-curtain text-[clamp(3rem,2rem+7vw,8rem)] leading-none font-light tracking-[0.15em] uppercase"
+        className="font-curtain text-[clamp(1.75rem,1rem+7vw,3rem)] leading-none font-light tracking-[0.1em] text-center uppercase sm:text-[clamp(3rem,2rem+7vw,8rem)] sm:tracking-[0.15em]"
       >
         {siteConfig.name}
       </h1>
