@@ -47,7 +47,6 @@ export const siteConfig = {
     { label: "Menu", href: "/menu" },
     { label: "About", href: "/about" },
     { label: "Gallery", href: "/gallery" },
-    { label: "Private Events", href: "/private-events" },
     { label: "Contact", href: "/contact" },
   ] as const,
 
