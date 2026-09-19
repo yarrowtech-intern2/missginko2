@@ -5,7 +5,7 @@ import { buildMetadata } from "@/seo/metadata"
 
 export const metadata: Metadata = buildMetadata({
   title: "Developer",
-  path: "/developer",
+  path: "/whomadeit",
   noIndex: true,
 })
 
@@ -13,10 +13,11 @@ const developer = {
   name: "Srijon Karmakar",
   role: "Full Stack Engineer",
   email: "srijonkarmakar.dev@gmail.com",
-  linkedin: "https://www.linkedin.com/in/srijon-karmakar/",
+  website: "https://srij.onrender.com",
+  websiteLabel: "srij.onrender.com",
 }
 
-export default function DeveloperPage() {
+export default function WhoMadeItPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 pt-24 text-center">
       <span className="text-xs font-medium tracking-[0.3em] text-primary uppercase">
@@ -38,12 +39,12 @@ export default function DeveloperPage() {
           {developer.email}
         </a>
         <a
-          href={developer.linkedin}
+          href={developer.website}
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-2 border-b border-current pb-1 text-sm transition-colors hover:text-primary"
         >
-          LinkedIn
+          {developer.websiteLabel}
           <ArrowUpRight className="size-4" />
         </a>
       </div>
